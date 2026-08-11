@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Xtyle">
+  <rect width="512" height="512" rx="144" fill="#D4A574"/>
+  <g fill="none" stroke="#1A2332" stroke-width="28" stroke-linecap="round" stroke-linejoin="round">
+    <!-- etiqueta / hangtag -->
+    <path d="M168 140h176v232H168z"/>
+    <circle cx="256" cy="188" r="22"/>
+    <path d="M210 260h92M210 310h92M210 360h60"/>
+  </g>
+</svg>
