@@ -74,6 +74,7 @@ function NavShell({
 
   const links = [
     { href: "/dashboard", label: "Inicio" },
+    { href: "/products", label: "Productos" },
     ...(canManageUsers ? [{ href: "/users", label: "Usuarios" }] : []),
   ];
 
