@@ -37,7 +37,7 @@ export default async function UsersPage() {
         canManageUsers={user.canManageUsers}
         bypassEnabled={isDevBypassEnabled()}
       />
-      <main className="mx-auto max-w-6xl px-4 py-10">
+      <main className="mx-auto max-w-6xl px-4 py-6 md:py-10">
         <UsersManager
           isSuperAdmin={user.isSuperAdmin}
           initialUsers={users.map((item) => ({

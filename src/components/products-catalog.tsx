@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useEffect, useState } from "react";
 
-import { FichaPdfViewer } from "@/components/ficha-pdf-viewer";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { FichaPdfViewer } from "@/components/ficha-pdf-viewer";
+import { cn } from "@/lib/utils";
 
 type ListedProduct = {
   id: string;
@@ -29,6 +30,74 @@ type ProductsCatalogProps = {
   canManageAll: boolean;
   currentUserEmail: string;
 };
+
+const actionBtn =
+  "inline-flex h-9 items-center justify-center whitespace-nowrap rounded-md px-2 text-[11px] font-medium disabled:opacity-40 sm:px-2.5 sm:text-xs";
+
+function CatalogActions({
+  product,
+  canClone,
+  busy,
+  fill,
+  onPreview,
+  onClone,
+  onDelete,
+}: {
+  product: ListedProduct;
+  canClone: boolean;
+  busy: boolean;
+  fill?: boolean;
+  onPreview: () => void;
+  onClone: () => void;
+  onDelete: () => void;
+}) {
+  const grow = fill ? "min-w-0 flex-1" : "";
+  return (
+    <div className={cn("flex gap-1.5", fill ? "" : "justify-end")}>
+      <Link
+        href={`/products/${product.id}`}
+        className={cn(
+          actionBtn,
+          grow,
+          "bg-primary text-primary-foreground",
+        )}
+      >
+        Abrir
+      </Link>
+      <button
+        type="button"
+        onClick={onPreview}
+        className={cn(actionBtn, grow, "border border-border hover:bg-muted")}
+      >
+        Ver ficha
+      </button>
+      {canClone ? (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={onClone}
+          className={cn(actionBtn, grow, "border border-border hover:bg-muted")}
+        >
+          {busy ? "Clonando…" : "Clonar"}
+        </button>
+      ) : null}
+      {product.canMutate ? (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={onDelete}
+          className={cn(
+            actionBtn,
+            grow,
+            "border border-destructive/40 text-destructive hover:bg-destructive/10",
+          )}
+        >
+          Eliminar
+        </button>
+      ) : null}
+    </div>
+  );
+}
 
 export function ProductsCatalog({
   initialProducts,
@@ -146,7 +215,7 @@ export function ProductsCatalog({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div>
           <h1 className="font-display text-2xl text-foreground">Productos</h1>
           <p className="text-sm text-muted-foreground">
@@ -157,24 +226,24 @@ export function ProductsCatalog({
         {canCreate ? (
           <Link
             href="/products/new"
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+            className="inline-flex h-11 items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground sm:h-auto sm:py-2"
           >
             Nuevo producto
           </Link>
         ) : null}
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Buscar por Marca, Style, editor o descripción…"
-          className="min-w-[16rem] flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+          className="w-full min-w-0 flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm sm:min-w-[16rem]"
         />
         <button
           type="button"
           onClick={() => void refresh()}
-          className="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted"
+          className="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted sm:shrink-0"
         >
           Actualizar
         </button>
@@ -187,7 +256,69 @@ export function ProductsCatalog({
       ) : null}
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
-      <div className="overflow-hidden rounded-xl border border-border">
+      {filtered.length === 0 ? (
+        <p className="rounded-xl border border-border px-4 py-8 text-center text-sm text-muted-foreground lg:hidden">
+          Aún no hay productos.
+        </p>
+      ) : (
+        <ul className="space-y-3 lg:hidden">
+          {filtered.map((product) => (
+            <li
+              key={product.id}
+              className="rounded-xl border border-border bg-card p-4"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-foreground">
+                    {product.brand ? `${product.brand} · ` : ""}
+                    {product.style}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {[product.retailer, product.season]
+                      .filter(Boolean)
+                      .join(" · ") || "—"}
+                  </p>
+                  <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                    {product.shortDescription}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {product.designerName || "—"} · v{product.version}
+                  </p>
+                </div>
+                <span
+                  className={
+                    product.status === "BORRADOR"
+                      ? "shrink-0 text-xs text-amber-300"
+                      : "shrink-0 text-xs text-emerald-400"
+                  }
+                >
+                  {product.status === "BORRADOR" ? "Borrador" : "Definitiva"}
+                </span>
+              </div>
+              <div className="mt-3">
+                <CatalogActions
+                  product={product}
+                  canClone={canClone}
+                  busy={busyId === product.id}
+                  fill
+                  onPreview={() =>
+                    setPreview({
+                      id: product.id,
+                      title: product.brand
+                        ? `${product.brand} · ${product.style}`
+                        : product.style,
+                    })
+                  }
+                  onClone={() => void handleClone(product.id)}
+                  onDelete={() => setPendingDelete(product)}
+                />
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="hidden overflow-hidden rounded-xl border border-border lg:block">
         <table className="w-full table-fixed text-left text-sm">
           <thead className="bg-muted/60 text-muted-foreground">
             <tr>
@@ -196,10 +327,10 @@ export function ProductsCatalog({
               <th className="w-[8%] px-4 py-3 font-medium">Temp.</th>
               <th className="w-[14%] px-4 py-3 font-medium">Style</th>
               <th className="w-[10%] px-4 py-3 font-medium">Editor</th>
-              <th className="w-[14%] px-4 py-3 font-medium">Descripción</th>
+              <th className="w-[12%] px-4 py-3 font-medium">Descripción</th>
               <th className="w-[8%] px-4 py-3 font-medium">Estado</th>
               <th className="w-[5%] px-4 py-3 font-medium">Ver.</th>
-              <th className="w-[22%] px-4 py-3 font-medium text-right">Acciones</th>
+              <th className="w-[24%] px-4 py-3 font-medium text-right">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -249,48 +380,21 @@ export function ProductsCatalog({
                   </td>
                   <td className="px-4 py-3">v{product.version}</td>
                   <td className="px-4 py-3">
-                    <div className="flex justify-end gap-3">
-                      <Link
-                        href={`/products/${product.id}`}
-                        className="text-xs underline-offset-2 hover:underline"
-                      >
-                        Abrir
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setPreview({
-                            id: product.id,
-                            title: product.brand
-                              ? `${product.brand} · ${product.style}`
-                              : product.style,
-                          })
-                        }
-                        className="text-xs underline-offset-2 hover:underline"
-                      >
-                        Ver Ficha
-                      </button>
-                      {canClone ? (
-                        <button
-                          type="button"
-                          disabled={busyId === product.id}
-                          onClick={() => void handleClone(product.id)}
-                          className="text-xs underline-offset-2 hover:underline disabled:opacity-40"
-                        >
-                          {busyId === product.id ? "Clonando…" : "Clonar"}
-                        </button>
-                      ) : null}
-                      {product.canMutate ? (
-                        <button
-                          type="button"
-                          disabled={busyId === product.id}
-                          onClick={() => setPendingDelete(product)}
-                          className="text-xs text-destructive underline-offset-2 hover:underline disabled:opacity-40"
-                        >
-                          Eliminar
-                        </button>
-                      ) : null}
-                    </div>
+                    <CatalogActions
+                      product={product}
+                      canClone={canClone}
+                      busy={busyId === product.id}
+                      onPreview={() =>
+                        setPreview({
+                          id: product.id,
+                          title: product.brand
+                            ? `${product.brand} · ${product.style}`
+                            : product.style,
+                        })
+                      }
+                      onClone={() => void handleClone(product.id)}
+                      onDelete={() => setPendingDelete(product)}
+                    />
                   </td>
                 </tr>
               ))

@@ -34,7 +34,7 @@ export function FichaPdfViewer({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center p-3 sm:p-6">
+    <div className="fixed inset-0 z-[80] flex items-stretch justify-center sm:items-center sm:p-6">
       <button
         type="button"
         aria-label="Cerrar"
@@ -45,9 +45,9 @@ export function FichaPdfViewer({
         role="dialog"
         aria-modal="true"
         aria-labelledby="ficha-pdf-title"
-        className="relative z-10 flex h-[min(92vh,920px)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl"
+        className="relative z-10 flex h-[100dvh] w-full max-w-5xl flex-col overflow-hidden border-border bg-card shadow-2xl sm:h-[min(92vh,920px)] sm:rounded-2xl sm:border"
       >
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
+        <div className="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div className="min-w-0">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">
               Vista PDF
@@ -59,31 +59,35 @@ export function FichaPdfViewer({
               {title}
             </h2>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
             <a
               href={pdfUrl}
               target="_blank"
               rel="noreferrer"
-              className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+              className="inline-flex h-10 items-center justify-center rounded-lg border border-border px-3 text-sm hover:bg-muted"
             >
               Abrir en pestaña
             </a>
             <a
               href={pdfUrl}
               download
-              className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+              className="inline-flex h-10 items-center justify-center rounded-lg border border-border px-3 text-sm hover:bg-muted"
             >
               Descargar
             </a>
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
+              className="col-span-2 inline-flex h-10 items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground sm:col-span-1"
             >
               Cerrar
             </button>
           </div>
         </div>
+        <p className="border-b border-border px-4 py-2 text-xs text-muted-foreground sm:hidden">
+          En el teléfono el PDF a veces no se incrusta. Si ves la pantalla
+          vacía, usa Abrir en pestaña.
+        </p>
         <div className="min-h-0 flex-1 bg-muted/40">
           <iframe
             key={pdfUrl}

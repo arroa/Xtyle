@@ -540,10 +540,8 @@ function CollageBoard({
       </p>
       {filled ? (
         <div
-          className="grid gap-2"
-          style={{
-            gridTemplateColumns: `repeat(${grid.cols}, minmax(0, 1fr))`,
-          }}
+          className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:[grid-template-columns:repeat(var(--cols),minmax(0,1fr))]"
+          style={{ ["--cols" as string]: String(grid.cols) }}
         >
           {page.images.map((slot, index) => (
             <ImageDropzone

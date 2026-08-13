@@ -374,6 +374,10 @@ export function CoverSheet({
       ) : null}
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
+      <p className="mb-2 text-xs text-muted-foreground lg:hidden">
+        Desliza hacia los lados para ver la carátula. En el teléfono, Ver Ficha
+        es la forma más cómoda de leerla.
+      </p>
       <div className="overflow-x-auto">
         <div className="mx-auto min-w-[52rem] max-w-4xl bg-[#f4f2ee] p-3 text-[#1a1a1a] shadow-xl">
           <div className="mb-1 grid min-w-0 grid-cols-3 items-center gap-2 bg-[#d8d8d8] px-3 py-2">

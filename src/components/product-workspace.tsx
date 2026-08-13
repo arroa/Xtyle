@@ -141,11 +141,11 @@ export function ProductWorkspace({
             </p>
           ) : null}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="grid w-full grid-cols-2 gap-2 lg:flex lg:w-auto lg:flex-wrap lg:items-center">
           <button
             type="button"
             onClick={() => setShowPdf(true)}
-            className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
+            className="inline-flex h-11 items-center justify-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground lg:h-9"
           >
             Ver Ficha
           </button>
@@ -153,26 +153,26 @@ export function ProductWorkspace({
             <button
               type="button"
               onClick={() => setConfirmRelease(true)}
-              className="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted"
+              className="inline-flex h-11 items-center justify-center rounded-md border border-border px-3 text-sm hover:bg-muted lg:h-9"
             >
-              Marcar Definitiva
-            </button>
-          ) : null}
-          {canEdit ? (
-            <button
-              type="button"
-              onClick={() => setConfirmDelete(true)}
-              className="rounded-md border border-destructive/40 px-3 py-2 text-sm text-destructive hover:bg-destructive/10"
-            >
-              Eliminar ficha
+              Definitiva
             </button>
           ) : null}
           <Link
             href="/products"
-            className="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted"
+            className="inline-flex h-11 items-center justify-center rounded-md border border-border px-3 text-sm hover:bg-muted lg:h-9"
           >
-            Volver al catálogo
+            Catálogo
           </Link>
+          {canEdit ? (
+            <button
+              type="button"
+              onClick={() => setConfirmDelete(true)}
+              className="inline-flex h-11 items-center justify-center rounded-md border border-destructive/40 px-3 text-sm text-destructive hover:bg-destructive/10 lg:h-9"
+            >
+              Eliminar ficha
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -206,7 +206,7 @@ export function ProductWorkspace({
         ))}
       </nav>
 
-      <div className="rounded-xl border border-border bg-card p-5">
+      <div className="rounded-xl border border-border bg-card p-3 sm:p-5">
         {tab === "cover" ? (
           <CoverSheet
             productId={product.id}
