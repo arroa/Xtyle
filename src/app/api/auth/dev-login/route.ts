@@ -22,7 +22,7 @@ export async function POST(request: Request) {
   const parsed = bodySchema.safeParse(json);
 
   if (!parsed.success) {
-    return NextResponse.json({ error: "Email inválido" }, { status: 400 });
+    return NextResponse.json({ error: "Correo inválido" }, { status: 400 });
   }
 
   const email = parsed.data.email.trim().toLowerCase();

@@ -8,7 +8,7 @@ export default function SignUpPage() {
         Los usuarios se crean desde la aplicación por un Admin o SuperAdmin.
       </p>
       <Link href="/sign-in" className="text-sm text-primary underline-offset-2 hover:underline">
-        Ir a ingresar
+        Ir a iniciar sesión
       </Link>
     </main>
   );

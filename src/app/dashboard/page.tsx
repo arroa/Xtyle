@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { AppHeader } from "@/components/app-header";
 import { getCurrentUser } from "@/lib/current-user";
 import { isDevBypassEnabled } from "@/lib/dev-flags";
-import { canEditProducts } from "@/lib/products";
+import { canCreateOrCloneProducts } from "@/lib/product-access";
 import { roleLabel } from "@/lib/roles";
 
 export default async function DashboardPage() {
@@ -13,7 +13,7 @@ export default async function DashboardPage() {
     redirect("/");
   }
 
-  const canEdit = canEditProducts(user.role, user.isSuperAdmin);
+  const canCreate = canCreateOrCloneProducts(user);
 
   return (
     <div className="min-h-full">
@@ -39,12 +39,12 @@ export default async function DashboardPage() {
             <p className="text-sm text-muted-foreground">Catálogo</p>
             <p className="mt-1 font-medium">Ver productos / fichas</p>
           </Link>
-          {canEdit ? (
+          {canCreate ? (
             <Link
               href="/products/new"
               className="rounded-xl border border-border bg-card p-5 transition hover:border-primary/40"
             >
-              <p className="text-sm text-muted-foreground">Alta</p>
+              <p className="text-sm text-muted-foreground">Nuevo</p>
               <p className="mt-1 font-medium">Nuevo producto (plantilla base)</p>
             </Link>
           ) : (

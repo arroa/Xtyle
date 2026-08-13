@@ -2,14 +2,14 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { requireUser } from "@/lib/api-auth";
+import { requireProductMutation } from "@/lib/require-product-write";
 import {
-  canEditProducts,
-  removeCollage,
-  updateCollage,
+  removeProductPage,
+  updateProductPage,
 } from "@/lib/products";
 
 type RouteContext = {
-  params: Promise<{ id: string; collageId: string }>;
+  params: Promise<{ id: string; pageId: string }>;
 };
 
 const patchSchema = z.object({
@@ -20,18 +20,17 @@ export async function PATCH(request: Request, context: RouteContext) {
   const auth = await requireUser();
   if ("error" in auth) return auth.error;
 
-  if (!canEditProducts(auth.user.role, auth.user.isSuperAdmin)) {
-    return NextResponse.json({ error: "No autorizado." }, { status: 403 });
-  }
+  const { id, pageId } = await context.params;
+  const allowed = await requireProductMutation(auth.user, id);
+  if ("error" in allowed) return allowed.error;
 
-  const { id, collageId } = await context.params;
   const json = await request.json().catch(() => null);
   const parsed = patchSchema.safeParse(json);
   if (!parsed.success) {
     return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
   }
 
-  const product = await updateCollage(id, collageId, {
+  const product = await updateProductPage(id, pageId, {
     title: parsed.data.title,
     updatedByEmail: auth.user.email,
   });
@@ -42,7 +41,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   return NextResponse.json({
     ok: true,
-    collage: product.collages.find((c) => c.id === collageId) ?? null,
+    page: product.pages.find((page) => page.id === pageId) ?? null,
   });
 }
 
@@ -50,15 +49,14 @@ export async function DELETE(_request: Request, context: RouteContext) {
   const auth = await requireUser();
   if ("error" in auth) return auth.error;
 
-  if (!canEditProducts(auth.user.role, auth.user.isSuperAdmin)) {
-    return NextResponse.json({ error: "No autorizado." }, { status: 403 });
-  }
+  const { id, pageId } = await context.params;
+  const allowed = await requireProductMutation(auth.user, id);
+  if ("error" in allowed) return allowed.error;
 
-  const { id, collageId } = await context.params;
-  const product = await removeCollage(id, collageId, auth.user.email);
+  const product = await removeProductPage(id, pageId, auth.user.email);
   if (!product) {
     return NextResponse.json({ error: "No se pudo eliminar." }, { status: 400 });
   }
 
-  return NextResponse.json({ ok: true, collages: product.collages });
+  return NextResponse.json({ ok: true, pages: product.pages });
 }

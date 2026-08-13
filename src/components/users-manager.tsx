@@ -186,7 +186,7 @@ export function UsersManager({
         <div>
           <h1 className="font-display text-2xl text-foreground">Usuarios</h1>
           <p className="text-sm text-muted-foreground">
-            ABM completo desde la app (alta, edición de perfil y baja lógica).
+            Crea, edita y desactiva usuarios desde la aplicación.
           </p>
         </div>
         <button

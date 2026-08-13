@@ -27,11 +27,11 @@ export default async function HomePage() {
             </p>
           </div>
           <h1 className="font-display text-4xl leading-tight text-foreground sm:text-5xl">
-            Fichas técnicas, sin maquetar a mano.
+            Fichas técnicas, sin armarlas a mano.
           </h1>
           <p className="max-w-md text-base text-muted-foreground sm:text-lg">
-            Crea, clona y libera fichas de vestuario con plantillas fijas:
-            carátula, etiqueta, medidas, size cuts y collages.
+            Crea, clona y marca como definitivas las fichas de vestuario:
+            encabezado, carátula y páginas Labels, Size Specs y Collage.
           </p>
           {bypassEnabled ? (
             <p className="rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-xs text-primary">

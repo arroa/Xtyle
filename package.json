@@ -16,6 +16,7 @@
     "mongodb": "^7.5.0",
     "next": "16.3.0",
     "next-cloudinary": "^6.18.8",
+    "pdf-lib": "^1.17.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "server-only": "^0.0.1",

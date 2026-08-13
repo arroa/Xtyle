@@ -1,94 +1,119 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
-import { CollagesRail } from "@/components/collages-rail";
-import {
-  PRODUCT_SECTIONS,
-  sectionLabel,
-  type ProductSection,
-} from "@/lib/product-types";
+import { ConfirmDialog } from "@/components/confirm-dialog";
+import { CoverSheet } from "@/components/cover-sheet";
+import { FichaPdfViewer } from "@/components/ficha-pdf-viewer";
+import { PagesRail } from "@/components/pages-rail";
+import { type CoverData, type CoverSection, type ProductPage } from "@/lib/product-types";
 import { cn } from "@/lib/utils";
 
 type ProductView = {
   id: string;
   brand: string;
+  retailer: string;
+  season: string;
   style: string;
   shortDescription: string;
   status: "BORRADOR" | "DEFINITIVA";
   version: number;
   cover: {
-    data: Record<string, unknown>;
-    images: Record<string, unknown>;
+    data: CoverData;
+    images: CoverSection["images"];
   };
-  label: { images: Record<string, unknown> };
-  sizeTable: { rows: unknown[]; sourceFile?: unknown };
-  sizeCuts: { images: Record<string, unknown> };
-  collages: { id: string; title: string; images: unknown[] }[];
+  pages: ProductPage[];
+};
+
+type Suggestions = {
+  brands: string[];
+  retailers: string[];
+  seasons: string[];
+  collageTitles: string[];
+};
+
+type DesignerOption = {
+  name: string;
+  email: string;
 };
 
 type ProductWorkspaceProps = {
   product: ProductView;
+  suggestions: Suggestions;
   canEdit: boolean;
+  canReassignDesigner: boolean;
+  designers: DesignerOption[];
+  createdByEmail: string;
 };
 
-function filledSlots(images: Record<string, unknown> | undefined) {
-  if (!images) return 0;
-  return Object.values(images).filter(Boolean).length;
-}
-
-export function ProductWorkspace({ product, canEdit }: ProductWorkspaceProps) {
-  const [section, setSection] = useState<ProductSection>("cover");
-  const [brand, setBrand] = useState(product.brand);
-  const [style, setStyle] = useState(product.style);
-  const [shortDescription, setShortDescription] = useState(
-    product.shortDescription,
-  );
+export function ProductWorkspace({
+  product,
+  suggestions,
+  canEdit,
+  canReassignDesigner,
+  designers,
+  createdByEmail,
+}: ProductWorkspaceProps) {
+  const router = useRouter();
+  const [tab, setTab] = useState<"cover" | "pages">("cover");
+  const [showPdf, setShowPdf] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmRelease, setConfirmRelease] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const progress = useMemo(() => {
-    return {
-      cover: {
-        data: Object.values(product.cover.data).filter(
-          (v) =>
-            (typeof v === "string" && v.trim()) ||
-            (Array.isArray(v) && v.length > 0),
-        ).length,
-        images: filledSlots(product.cover.images),
-      },
-      label: { images: filledSlots(product.label.images) },
-      sizeTable: {
-        rows: product.sizeTable.rows?.length ?? 0,
-        hasExcel: Boolean(product.sizeTable.sourceFile),
-      },
-      sizeCuts: { images: filledSlots(product.sizeCuts.images) },
-      collages: product.collages.length,
-    };
-  }, [product]);
+  const locked = !canEdit || product.status !== "BORRADOR";
 
-  async function saveBasics(event: React.FormEvent) {
-    event.preventDefault();
-    if (!canEdit || product.status !== "BORRADOR") return;
+  useEffect(() => {
+    if (!success) return;
+    const t = window.setTimeout(() => setSuccess(""), 3000);
+    return () => window.clearTimeout(t);
+  }, [success]);
+
+  async function handleRelease() {
     setBusy(true);
     setError("");
     setSuccess("");
     try {
-      const res = await fetch(`/api/products/${product.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brand, style, shortDescription }),
+      const res = await fetch(`/api/products/${product.id}/release`, {
+        method: "POST",
       });
       const data = (await res.json().catch(() => null)) as {
         error?: string;
       } | null;
       if (!res.ok) {
-        setError(data?.error ?? "No se pudo guardar.");
+        setError(data?.error ?? "No se pudo pasar a Definitiva.");
+        setConfirmRelease(false);
         return;
       }
-      setSuccess("Datos básicos guardados.");
+      setConfirmRelease(false);
+      setSuccess("Ficha marcada como Definitiva.");
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDelete() {
+    setBusy(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/products/${product.id}`, {
+        method: "DELETE",
+      });
+      const data = (await res.json().catch(() => null)) as {
+        error?: string;
+      } | null;
+      if (!res.ok) {
+        setError(data?.error ?? "No se pudo eliminar.");
+        setConfirmDelete(false);
+        return;
+      }
+      router.push("/products");
+      router.refresh();
     } finally {
       setBusy(false);
     }
@@ -99,8 +124,9 @@ export function ProductWorkspace({ product, canEdit }: ProductWorkspaceProps) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-wide text-muted-foreground">
-            Producto · {product.status === "BORRADOR" ? "Borrador" : "Definitiva"}{" "}
-            · v{product.version}
+            {product.retailer} · {product.season} ·{" "}
+            {product.status === "BORRADOR" ? "Borrador" : "Definitiva"} · v
+            {product.version}
           </p>
           <h1 className="font-display text-2xl text-foreground">
             {product.brand ? `${product.brand} · ` : ""}
@@ -109,13 +135,45 @@ export function ProductWorkspace({ product, canEdit }: ProductWorkspaceProps) {
           <p className="text-sm text-muted-foreground">
             {product.shortDescription}
           </p>
+          {!canEdit ? (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Solo lectura en esta ficha.
+            </p>
+          ) : null}
         </div>
-        <Link
-          href="/products"
-          className="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted"
-        >
-          Volver al catálogo
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowPdf(true)}
+            className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
+          >
+            Ver Ficha
+          </button>
+          {canEdit && product.status === "BORRADOR" ? (
+            <button
+              type="button"
+              onClick={() => setConfirmRelease(true)}
+              className="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted"
+            >
+              Marcar Definitiva
+            </button>
+          ) : null}
+          {canEdit ? (
+            <button
+              type="button"
+              onClick={() => setConfirmDelete(true)}
+              className="rounded-md border border-destructive/40 px-3 py-2 text-sm text-destructive hover:bg-destructive/10"
+            >
+              Eliminar ficha
+            </button>
+          ) : null}
+          <Link
+            href="/products"
+            className="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            Volver al catálogo
+          </Link>
+        </div>
       </div>
 
       {success ? (
@@ -126,142 +184,90 @@ export function ProductWorkspace({ product, canEdit }: ProductWorkspaceProps) {
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
       <nav className="flex flex-wrap gap-2">
-        {PRODUCT_SECTIONS.map((key) => (
+        {(
+          [
+            ["cover", "Carátula"],
+            ["pages", "Páginas"],
+          ] as const
+        ).map(([key, label]) => (
           <button
             key={key}
             type="button"
-            onClick={() => setSection(key)}
+            onClick={() => setTab(key)}
             className={cn(
               "rounded-lg px-3 py-2 text-sm",
-              section === key
+              tab === key
                 ? "bg-primary/15 font-medium text-foreground"
                 : "border border-border text-muted-foreground hover:bg-muted",
             )}
           >
-            {sectionLabel(key)}
+            {label}
           </button>
         ))}
       </nav>
 
       <div className="rounded-xl border border-border bg-card p-5">
-        {section === "cover" ? (
-          <div className="space-y-4">
-            <div>
-              <h2 className="font-display text-lg">Carátula</h2>
-              <p className="text-sm text-muted-foreground">
-                Plantilla fija: datos + slots de imagen. Ahora editas lo básico;
-                Excel e imágenes vienen después.
-              </p>
-            </div>
-            <form onSubmit={saveBasics} className="grid gap-3 sm:grid-cols-2">
-              <label className="block space-y-1 text-sm sm:col-span-2">
-                <span className="text-muted-foreground">Marca</span>
-                <input
-                  value={brand}
-                  disabled={!canEdit || product.status !== "BORRADOR"}
-                  onChange={(e) => setBrand(e.target.value)}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 disabled:opacity-60"
-                />
-              </label>
-              <label className="block space-y-1 text-sm sm:col-span-2">
-                <span className="text-muted-foreground">Style</span>
-                <input
-                  value={style}
-                  disabled={!canEdit || product.status !== "BORRADOR"}
-                  onChange={(e) => setStyle(e.target.value)}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 disabled:opacity-60"
-                />
-              </label>
-              <label className="block space-y-1 text-sm sm:col-span-2">
-                <span className="text-muted-foreground">Short Description</span>
-                <input
-                  value={shortDescription}
-                  disabled={!canEdit || product.status !== "BORRADOR"}
-                  onChange={(e) => setShortDescription(e.target.value)}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 disabled:opacity-60"
-                />
-              </label>
-              {canEdit && product.status === "BORRADOR" ? (
-                <div className="sm:col-span-2">
-                  <button
-                    type="submit"
-                    disabled={busy}
-                    className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-60"
-                  >
-                    {busy ? "Guardando…" : "Guardar básicos"}
-                  </button>
-                </div>
-              ) : null}
-            </form>
-            <p className="text-xs text-muted-foreground">
-              Progreso plantilla: {progress.cover.data} campos con dato ·{" "}
-              {progress.cover.images}/5 imágenes
-            </p>
-          </div>
-        ) : null}
-
-        {section === "label" ? (
-          <div className="space-y-2">
-            <h2 className="font-display text-lg">Etiqueta</h2>
-            <p className="text-sm text-muted-foreground">
-              Estructura fija: espera 2 imágenes. Slot listo en plantilla (
-              {progress.label.images}/2).
-            </p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              {["Imagen 1", "Imagen 2"].map((label) => (
-                <div
-                  key={label}
-                  className="flex h-36 items-center justify-center rounded-lg border border-dashed border-border text-sm text-muted-foreground"
-                >
-                  {label} · pendiente upload
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
-
-        {section === "sizeTable" ? (
-          <div className="space-y-2">
-            <h2 className="font-display text-lg">SizeTable</h2>
-            <p className="text-sm text-muted-foreground">
-              Upload Excel con plantilla fija. Ahora:{" "}
-              {progress.sizeTable.rows} filas · Excel{" "}
-              {progress.sizeTable.hasExcel ? "cargado" : "pendiente"}.
-            </p>
-            <div className="mt-4 rounded-lg border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
-              Próximo: descargar plantilla + importar Excel
-            </div>
-          </div>
-        ) : null}
-
-        {section === "sizeCuts" ? (
-          <div className="space-y-2">
-            <h2 className="font-display text-lg">SizeCuts</h2>
-            <p className="text-sm text-muted-foreground">
-              Hoja fija: 1 o 2 imágenes ({progress.sizeCuts.images}/2).
-            </p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              {["Diagrama 1", "Diagrama 2 (opcional)"].map((label) => (
-                <div
-                  key={label}
-                  className="flex h-36 items-center justify-center rounded-lg border border-dashed border-border text-sm text-muted-foreground"
-                >
-                  {label} · pendiente upload
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
-
-        {section === "collages" ? (
-          <CollagesRail
+        {tab === "cover" ? (
+          <CoverSheet
             productId={product.id}
-            initialCollages={product.collages}
+            initial={product.cover.data}
+            initialImages={product.cover.images}
+            suggestions={suggestions}
+            locked={locked}
+            canReassignDesigner={canReassignDesigner}
+            designers={designers}
+            ownerEmail={createdByEmail}
+          />
+        ) : (
+          <PagesRail
+            productId={product.id}
+            initialPages={product.pages}
+            collageTitles={suggestions.collageTitles}
             canEdit={canEdit}
             isDraft={product.status === "BORRADOR"}
           />
-        ) : null}
+        )}
       </div>
+
+      <FichaPdfViewer
+        open={showPdf}
+        productId={product.id}
+        title={
+          product.brand
+            ? `${product.brand} · ${product.style}`
+            : product.style
+        }
+        onClose={() => setShowPdf(false)}
+      />
+
+      <ConfirmDialog
+        open={confirmRelease}
+        title="Marcar como Definitiva"
+        description={`“${product.style}” pasará a Definitiva. Dejará de poder editarse. Para modificarla después, clónala o crea una nueva versión.`}
+        confirmLabel="Marcar Definitiva"
+        cancelLabel="Cancelar"
+        busy={busy}
+        onCancel={() => {
+          if (!busy) setConfirmRelease(false);
+        }}
+        onConfirm={() => void handleRelease()}
+      />
+
+      <ConfirmDialog
+        open={confirmDelete}
+        title="Eliminar ficha"
+        description={`Se eliminará “${product.style}”${
+          product.brand ? ` (${product.brand})` : ""
+        }. Esta acción no se puede deshacer.`}
+        confirmLabel="Eliminar"
+        cancelLabel="Cancelar"
+        tone="danger"
+        busy={busy}
+        onCancel={() => {
+          if (!busy) setConfirmDelete(false);
+        }}
+        onConfirm={() => void handleDelete()}
+      />
     </div>
   );
 }

@@ -3,9 +3,21 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export function ProductCreateForm() {
+import { ComboField } from "@/components/combo-field";
+
+type ProductCreateFormProps = {
+  suggestions: {
+    brands: string[];
+    retailers: string[];
+    seasons: string[];
+  };
+};
+
+export function ProductCreateForm({ suggestions }: ProductCreateFormProps) {
   const router = useRouter();
   const [brand, setBrand] = useState("");
+  const [retailer, setRetailer] = useState("");
+  const [season, setSeason] = useState("");
   const [style, setStyle] = useState("");
   const [shortDescription, setShortDescription] = useState("");
   const [error, setError] = useState("");
@@ -19,7 +31,13 @@ export function ProductCreateForm() {
       const res = await fetch("/api/products", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brand, style, shortDescription }),
+        body: JSON.stringify({
+          brand,
+          retailer,
+          season,
+          style,
+          shortDescription,
+        }),
       });
       const data = (await res.json().catch(() => null)) as {
         error?: string;
@@ -44,21 +62,38 @@ export function ProductCreateForm() {
       <div>
         <h1 className="font-display text-2xl">Nuevo producto</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Alta mínima: Marca, Style y Short Description. Queda en Borrador con
-          la plantilla base.
+          Encabezado de la ficha. Marca, Retailer y Temporada reutilizan valores
+          ya usados; también puedes escribir uno nuevo.
         </p>
       </div>
 
-      <label className="block space-y-1 text-sm">
-        <span className="text-muted-foreground">Marca</span>
-        <input
-          required
-          value={brand}
-          onChange={(e) => setBrand(e.target.value)}
-          placeholder="Regatta"
-          className="w-full rounded-md border border-input bg-background px-3 py-2"
-        />
-      </label>
+      <ComboField
+        id="brand"
+        label="Marca"
+        value={brand}
+        onChange={setBrand}
+        options={suggestions.brands}
+        placeholder="Regatta"
+        required
+      />
+      <ComboField
+        id="retailer"
+        label="Retailer"
+        value={retailer}
+        onChange={setRetailer}
+        options={suggestions.retailers}
+        placeholder="RIPLEY"
+        required
+      />
+      <ComboField
+        id="season"
+        label="Temporada"
+        value={season}
+        onChange={setSeason}
+        options={suggestions.seasons}
+        placeholder="WINTER 27"
+        required
+      />
 
       <label className="block space-y-1 text-sm">
         <span className="text-muted-foreground">Style</span>

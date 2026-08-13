@@ -5,14 +5,23 @@ import { AppHeader } from "@/components/app-header";
 import { ProductsCatalog } from "@/components/products-catalog";
 import { getCurrentUser } from "@/lib/current-user";
 import { isDevBypassEnabled } from "@/lib/dev-flags";
-import { canEditProducts, listProducts } from "@/lib/products";
+import { canCreateOrCloneProducts, canMutateProduct } from "@/lib/product-access";
+import { listProducts } from "@/lib/products";
+import { resolveDesignerNames } from "@/lib/users";
 
 export default async function ProductsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/");
 
   const products = await listProducts();
-  const canEdit = canEditProducts(user.role, user.isSuperAdmin);
+  const designerNames = await resolveDesignerNames(
+    products.map((product) => ({
+      designer: product.cover.data.designer,
+      createdByEmail: product.createdByEmail,
+    })),
+  );
+  const canCreate = canCreateOrCloneProducts(user);
+  const canManageAll = user.isSuperAdmin || user.role === "ADMIN";
 
   return (
     <div className="min-h-full">
@@ -25,18 +34,26 @@ export default async function ProductsPage() {
       />
       <main className="mx-auto max-w-6xl px-4 py-10">
         <ProductsCatalog
-          canEdit={canEdit}
-          initialProducts={products.map((product) => ({
+          canCreate={canCreate}
+          canClone={canCreate}
+          canManageAll={canManageAll}
+          currentUserEmail={user.email}
+          initialProducts={products.map((product, index) => ({
             id:
               product._id instanceof ObjectId
                 ? product._id.toString()
                 : String(product._id),
-            brand: product.brand || product.cover?.data?.brand || "",
+            brand: product.brand,
+            retailer: product.retailer,
+            season: product.season,
             style: product.style,
             shortDescription: product.shortDescription,
             status: product.status,
             version: product.version,
             updatedAt: product.updatedAt,
+            createdByEmail: product.createdByEmail,
+            designerName: designerNames[index] ?? "",
+            canMutate: canMutateProduct(user, product),
           }))}
         />
       </main>

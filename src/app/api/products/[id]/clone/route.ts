@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 
 import { requireUser } from "@/lib/api-auth";
-import { canEditProducts, cloneProduct } from "@/lib/products";
+import { canCreateOrCloneProducts } from "@/lib/product-access";
+import { cloneProduct } from "@/lib/products";
+import { resolveActorDisplayName } from "@/lib/users";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -12,12 +14,16 @@ export async function POST(_request: Request, context: RouteContext) {
   const auth = await requireUser();
   if ("error" in auth) return auth.error;
 
-  if (!canEditProducts(auth.user.role, auth.user.isSuperAdmin)) {
+  if (!canCreateOrCloneProducts(auth.user)) {
     return NextResponse.json({ error: "No autorizado." }, { status: 403 });
   }
 
   const { id } = await context.params;
-  const product = await cloneProduct(id, auth.user.email);
+  const product = await cloneProduct(
+    id,
+    auth.user.email,
+    await resolveActorDisplayName(auth.user),
+  );
   if (!product) {
     return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
   }
@@ -31,6 +37,8 @@ export async function POST(_request: Request, context: RouteContext) {
             ? product._id.toString()
             : String(product._id),
         brand: product.brand,
+        retailer: product.retailer,
+        season: product.season,
         style: product.style,
         shortDescription: product.shortDescription,
         status: product.status,

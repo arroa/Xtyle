@@ -47,29 +47,9 @@ export default async function proxy(request: NextRequest, event: unknown) {
     return handleDevBypass(request);
   }
 
-  const { clerkMiddleware, createRouteMatcher } = await import(
-    "@clerk/nextjs/server"
-  );
+  const { clerkMiddleware } = await import("@clerk/nextjs/server");
 
-  const isPublicRoute = createRouteMatcher([
-    "/",
-    "/sign-in(.*)",
-    "/sign-up(.*)",
-    "/api/health(.*)",
-    "/api/auth/dev-login(.*)",
-    "/api/auth/dev-logout(.*)",
-  ]);
-
-  const clerkHandler = clerkMiddleware(async (auth, req) => {
-    if (await getDevSessionUserIdFromRequest(req)) {
-      return;
-    }
-
-    if (!isPublicRoute(req)) {
-      await auth.protect();
-    }
-  });
-
+  const clerkHandler = clerkMiddleware();
   const result = await clerkHandler(request, event as never);
   if (result) return result;
   return withPathnameHeader(request);

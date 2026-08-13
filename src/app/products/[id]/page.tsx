@@ -5,7 +5,12 @@ import { AppHeader } from "@/components/app-header";
 import { ProductWorkspace } from "@/components/product-workspace";
 import { getCurrentUser } from "@/lib/current-user";
 import { isDevBypassEnabled } from "@/lib/dev-flags";
-import { canEditProducts, getProductById } from "@/lib/products";
+import {
+  canMutateProduct,
+  canReassignDesigner,
+} from "@/lib/product-access";
+import { getProductById, listFieldSuggestions } from "@/lib/products";
+import { listAssignableDesigners, resolveDesignerName } from "@/lib/users";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -19,7 +24,15 @@ export default async function ProductDetailPage({ params }: PageProps) {
   const product = await getProductById(id);
   if (!product) notFound();
 
-  const canEdit = canEditProducts(user.role, user.isSuperAdmin);
+  const canEdit = canMutateProduct(user, product);
+  const suggestions = await listFieldSuggestions();
+  const designers = canReassignDesigner(user)
+    ? await listAssignableDesigners()
+    : [];
+  const designerName = await resolveDesignerName({
+    designer: product.cover.data.designer,
+    createdByEmail: product.createdByEmail,
+  });
 
   return (
     <div className="min-h-full">
@@ -33,21 +46,30 @@ export default async function ProductDetailPage({ params }: PageProps) {
       <main className="mx-auto max-w-6xl px-4 py-10">
         <ProductWorkspace
           canEdit={canEdit}
+          canReassignDesigner={canReassignDesigner(user)}
+          designers={designers}
+          createdByEmail={product.createdByEmail}
+          suggestions={suggestions}
           product={{
             id:
               product._id instanceof ObjectId
                 ? product._id.toString()
                 : String(product._id),
-            brand: product.brand || product.cover?.data?.brand || "",
+            brand: product.brand,
+            retailer: product.retailer,
+            season: product.season,
             style: product.style,
             shortDescription: product.shortDescription,
             status: product.status,
             version: product.version,
-            cover: product.cover,
-            label: product.label,
-            sizeTable: product.sizeTable,
-            sizeCuts: product.sizeCuts,
-            collages: product.collages,
+            cover: {
+              ...product.cover,
+              data: {
+                ...product.cover.data,
+                designer: designerName,
+              },
+            },
+            pages: product.pages,
           }}
         />
       </main>

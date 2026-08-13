@@ -3,14 +3,17 @@ import { ObjectId } from "mongodb";
 import { z } from "zod";
 
 import { requireUser } from "@/lib/api-auth";
+import { canCreateOrCloneProducts } from "@/lib/product-access";
 import {
-  canEditProducts,
   createProduct,
   listProducts,
 } from "@/lib/products";
+import { resolveActorDisplayName, resolveDesignerNames } from "@/lib/users";
 
 const createSchema = z.object({
   brand: z.string().min(1).max(120),
+  retailer: z.string().min(1).max(120),
+  season: z.string().min(1).max(80),
   style: z.string().min(1).max(120),
   shortDescription: z.string().min(1).max(200),
 });
@@ -25,19 +28,30 @@ export async function GET(request: Request) {
     status: searchParams.get("status") ?? undefined,
   });
 
+  const designerNames = await resolveDesignerNames(
+    products.map((product) => ({
+      designer: product.cover.data.designer,
+      createdByEmail: product.createdByEmail,
+    })),
+  );
+
   return NextResponse.json({
-    products: products.map((product) => ({
+    products: products.map((product, index) => ({
       id:
         product._id instanceof ObjectId
           ? product._id.toString()
           : String(product._id),
-      brand: product.brand || product.cover?.data?.brand || "",
+      brand: product.brand,
+      retailer: product.retailer,
+      season: product.season,
       style: product.style,
       shortDescription: product.shortDescription,
       status: product.status,
       version: product.version,
       updatedAt: product.updatedAt,
       createdAt: product.createdAt,
+      createdByEmail: product.createdByEmail,
+      designerName: designerNames[index] ?? "",
     })),
   });
 }
@@ -46,7 +60,7 @@ export async function POST(request: Request) {
   const auth = await requireUser();
   if ("error" in auth) return auth.error;
 
-  if (!canEditProducts(auth.user.role, auth.user.isSuperAdmin)) {
+  if (!canCreateOrCloneProducts(auth.user)) {
     return NextResponse.json({ error: "No autorizado." }, { status: 403 });
   }
 
@@ -57,10 +71,9 @@ export async function POST(request: Request) {
   }
 
   const product = await createProduct({
-    brand: parsed.data.brand,
-    style: parsed.data.style,
-    shortDescription: parsed.data.shortDescription,
+    ...parsed.data,
     createdByEmail: auth.user.email,
+    designerName: await resolveActorDisplayName(auth.user),
   });
 
   return NextResponse.json(
@@ -69,6 +82,8 @@ export async function POST(request: Request) {
       product: {
         id: product._id!.toString(),
         brand: product.brand,
+        retailer: product.retailer,
+        season: product.season,
         style: product.style,
         shortDescription: product.shortDescription,
         status: product.status,

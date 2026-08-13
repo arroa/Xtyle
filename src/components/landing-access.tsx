@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -51,7 +50,7 @@ export function LandingAccess({
       } | null;
 
       if (!response.ok) {
-        setError(payload?.error ?? "No fue posible ingresar.");
+        setError(payload?.error ?? "No fue posible iniciar sesión.");
         return;
       }
 
@@ -72,15 +71,15 @@ export function LandingAccess({
           onClick={() => setOpen(true)}
           className="inline-flex h-11 w-full items-center justify-center rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
         >
-          Ingresar al sistema
+          Iniciar sesión
         </button>
       ) : (
         <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-          <h2 className="font-display text-lg text-foreground">Ingresar</h2>
+          <h2 className="font-display text-lg text-foreground">Iniciar sesión</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             {bypassEnabled
-              ? "Modo bypass: ingresa con un correo autorizado."
-              : "Te enviaremos un código por email."}
+              ? "Modo bypass: inicia sesión con un correo autorizado."
+              : "Te enviaremos un código por correo."}
           </p>
 
           {bypassEnabled ? (
@@ -123,13 +122,6 @@ export function LandingAccess({
           </button>
         </div>
       )}
-
-      <p className="text-center text-xs text-muted-foreground">
-        ¿Problemas?{" "}
-        <Link href="/sign-in" className="underline underline-offset-2">
-          Ir a /sign-in
-        </Link>
-      </p>
     </div>
   );
 }

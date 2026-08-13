@@ -4,6 +4,7 @@ import type { Collection } from "mongodb";
 
 import { ensureClerkUser, normalizeEmail } from "@/lib/clerk-users";
 import { getDb } from "@/lib/mongodb";
+import { personDisplayName } from "@/lib/person-name";
 import {
   type AppRole,
   type AppUser,
@@ -29,6 +30,61 @@ export async function findUserByEmail(email: string): Promise<AppUser | null> {
   return col.findOne({ email: normalizeEmail(email) });
 }
 
+export async function resolveDesignerName(input: {
+  designer?: string;
+  createdByEmail?: string;
+}): Promise<string> {
+  const fromField = personDisplayName(input.designer);
+  if (fromField) return fromField;
+  if (!input.createdByEmail) return "";
+  const owner = await findUserByEmail(input.createdByEmail);
+  return personDisplayName(owner?.name);
+}
+
+export async function resolveActorDisplayName(input: {
+  name: string;
+  email: string;
+}): Promise<string> {
+  const fromSession = personDisplayName(input.name);
+  if (fromSession) return fromSession;
+  const appUser = await findUserByEmail(input.email);
+  return personDisplayName(appUser?.name);
+}
+
+export async function listNamesByEmails(
+  emails: string[],
+): Promise<Map<string, string>> {
+  const unique = [
+    ...new Set(
+      emails.map((email) => email.trim().toLowerCase()).filter(Boolean),
+    ),
+  ];
+  const map = new Map<string, string>();
+  if (!unique.length) return map;
+
+  const col = await usersCollection();
+  const users = await col.find({ email: { $in: unique } }).toArray();
+  for (const user of users) {
+    const name = personDisplayName(user.name);
+    if (name) map.set(user.email.toLowerCase(), name);
+  }
+  return map;
+}
+
+export async function resolveDesignerNames(
+  items: Array<{ designer?: string; createdByEmail?: string }>,
+): Promise<string[]> {
+  const names = await listNamesByEmails(
+    items.map((item) => item.createdByEmail ?? ""),
+  );
+  return items.map(
+    (item) =>
+      personDisplayName(item.designer) ||
+      names.get((item.createdByEmail ?? "").trim().toLowerCase()) ||
+      "",
+  );
+}
+
 export async function hasAssignedAccess(email: string): Promise<boolean> {
   const user = await findUserByEmail(email);
   return Boolean(user && user.status === "ACTIVE");
@@ -37,6 +93,26 @@ export async function hasAssignedAccess(email: string): Promise<boolean> {
 export async function listUsers(): Promise<AppUser[]> {
   const col = await usersCollection();
   return col.find({}).sort({ createdAt: -1 }).toArray();
+}
+
+/** Admins y Editors activos: candidatos a Designer / dueño de ficha. */
+export async function listAssignableDesigners(): Promise<
+  Array<{ name: string; email: string }>
+> {
+  const col = await usersCollection();
+  const users = await col
+    .find({
+      status: "ACTIVE",
+      role: { $in: ["ADMIN", "EDITOR"] },
+    })
+    .sort({ name: 1 })
+    .toArray();
+  return users
+    .map((user) => ({
+      name: personDisplayName(user.name),
+      email: user.email,
+    }))
+    .filter((user) => user.name);
 }
 
 export async function createAppUser(input: {

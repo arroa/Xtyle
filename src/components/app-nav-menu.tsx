@@ -133,7 +133,7 @@ function NavShell({
               onClick={onSignOut}
               className="flex h-10 w-full items-center justify-center rounded-lg border border-border text-sm hover:bg-muted disabled:opacity-60"
             >
-              {leaving ? "Saliendo…" : "Salir"}
+              {leaving ? "Cerrando sesión…" : "Cerrar sesión"}
             </button>
           </div>
         </div>

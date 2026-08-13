@@ -145,7 +145,7 @@ export async function DELETE(request: Request) {
   const email =
     typeof json?.email === "string" ? json.email.trim().toLowerCase() : "";
   if (!email) {
-    return NextResponse.json({ error: "Email requerido" }, { status: 400 });
+    return NextResponse.json({ error: "Correo requerido" }, { status: 400 });
   }
 
   const updated = await deactivateAppUser(email);

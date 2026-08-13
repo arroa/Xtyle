@@ -25,7 +25,7 @@ export default async function SignInPage() {
     <main className="mx-auto flex min-h-full max-w-md flex-col justify-center gap-6 px-6 py-16">
       <div className="flex items-center gap-3">
         <XtyleAvatar sizeClassName="size-10" />
-        <h1 className="font-display text-2xl">Xtyle · Ingresar</h1>
+        <h1 className="font-display text-2xl">Xtyle · Iniciar sesión</h1>
       </div>
       <div className="rounded-xl border border-border bg-card p-5">
         <XtyleSignInForm destination={destination} />
